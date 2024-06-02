@@ -57,10 +57,8 @@ def fetch_repo_and_contributors(owner, repo_name):
         return None, None, [], None
 
 
-def process_json_in_chunks(json_file, output_file, chunk_size=100):
+def process_json(json_file, output_file):
     with open(json_file, 'r', encoding='utf-8') as file:
-        counter = 0
-        all_data = []
         for line in file:
             user = json.loads(line.strip())
             if user.get('repo_list'):
@@ -74,17 +72,7 @@ def process_json_in_chunks(json_file, output_file, chunk_size=100):
                             for contributor in contributors:
                                 row = [repo_id, repo_owner, user['login'], contributor['login'],
                                        contributor['contributions'], contributor['html_url'], repo_name, repo_url]
-                                all_data.append(row)
-                    else:
-                        print("Repository name not found in the repository data.")
-
-            counter += 1
-            if counter % chunk_size == 0:
-                save_to_csv(all_data, output_file)
-                all_data = []
-
-        if all_data:
-            save_to_csv(all_data, output_file)
+                                save_to_csv([row], output_file)
 
     print(f"Data successfully written to {output_file}")
 
@@ -101,4 +89,4 @@ def save_to_csv(data, output_file):
 json_file = "filtered_data.json"  # Replace with your JSON file path
 output_file = "contributors.csv"  # Replace with your desired output file name
 
-process_json_in_chunks(json_file, output_file, chunk_size=100)
+process_json(json_file, output_file, chunk_size=100)
