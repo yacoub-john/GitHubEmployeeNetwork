@@ -3,13 +3,10 @@ import csv
 import time
 import requests
 
-from github import Github
-
 
 def fetch_repo_details(owner, repo_name):
     try:
         url = f"https://api.github.com/repos/{owner}/{repo_name}"
-        print(url)
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()
@@ -58,6 +55,7 @@ def fetch_repo_and_contributors(owner, repo_name):
 
 
 def process_json(json_file, output_file):
+    header_written = False
     with open(json_file, 'r', encoding='utf-8') as file:
         for line in file:
             user = json.loads(line.strip())
@@ -70,23 +68,27 @@ def process_json(json_file, output_file):
                                                                                                   repo_name)
                         if repo_id and repo_owner:
                             for contributor in contributors:
-                                row = [repo_id, repo_owner, user['login'], contributor['login'],
-                                       contributor['contributions'], contributor['html_url'], repo_name, repo_url]
-                                save_to_csv([row], output_file)
+                                if contributor['login'] != repo_owner:  # Exclude the owner
+                                    row = [repo_id, repo_owner, contributor['id'], contributor['contributions']]
+                                    if not header_written:
+                                        save_to_csv([row], output_file, header=True)
+                                        header_written = True
+                                    else:
+                                        save_to_csv([row], output_file)
 
     print(f"Data successfully written to {output_file}")
 
 
-def save_to_csv(data, output_file):
+def save_to_csv(data, output_file, header=False):
     with open(output_file, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
+        if header:
+            writer.writerow(["Repo ID", "Owner ID", "Collaborator ID", "Number of Collaborations"])
         for row in data:
             writer.writerow(row)
 
 
-#g = Github("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")
-
-json_file = "filtered_data.json"  # Replace with your JSON file path
+json_file = "data.json"  # Replace with your JSON file path
 output_file = "contributors.csv"  # Replace with your desired output file name
 
-process_json(json_file, output_file, chunk_size=100)
+process_json(json_file, output_file)
