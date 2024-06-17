@@ -7,12 +7,13 @@ import requests
 def fetch_repo_details(owner, repo_name):
     try:
         url = f"https://api.github.com/repos/{owner}/{repo_name}"
+        print(url)
         response = requests.get(url)
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 403:
             print("Rate limit exceeded. Retrying in a moment...")
-            time.sleep(60)
+            time.sleep(1)
             return fetch_repo_details(owner, repo_name)
         elif response.status_code == 404:
             print(f"Repository {owner}/{repo_name} not found.")
@@ -88,7 +89,7 @@ def save_to_csv(data, output_file, header=False):
             writer.writerow(row)
 
 
-json_file = "data.json"  # Replace with your JSON file path
+json_file = "filtered_data.json"  # Replace with your JSON file path
 output_file = "contributors.csv"  # Replace with your desired output file name
 
 process_json(json_file, output_file)

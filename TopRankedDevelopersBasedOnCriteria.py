@@ -1,15 +1,10 @@
 import pandas as pd
 import networkx as nx
 import re
-
-from community import community_louvain
 from sklearn.metrics.pairwise import cosine_similarity
-from networkx.algorithms.community import greedy_modularity_communities
-from networkx.algorithms.link_prediction import resource_allocation_index, jaccard_coefficient, adamic_adar_index
 
 # Load the CSV data into a pandas DataFrame
 df = pd.read_csv('developers.csv')
-
 
 # Function to clean and convert yearly contributions to integers
 def clean_contributions(value):
@@ -20,10 +15,8 @@ def clean_contributions(value):
     except ValueError:
         return 0  # Return 0 if conversion fails
 
-
 # Apply the cleaning function to the 'yearly_contributions' column
 df['yearly_contributions'] = df['yearly_contributions'].apply(clean_contributions)
-
 
 # Function to calculate the feature vector score based on matching criteria
 def calculate_score(bio, target_languages, target_education, experience, yearly_contributions):
@@ -43,7 +36,6 @@ def calculate_score(bio, target_languages, target_education, experience, yearly_
         score += yearly_contributions * 0.01  # Adjust the scale if necessary
     return score
 
-
 # Function to compute cosine similarity between two sets of words
 def compute_similarity(bio, target_words):
     # Tokenize the bio and target words
@@ -55,7 +47,6 @@ def compute_similarity(bio, target_words):
     similarity = cosine_similarity([bio_vector], [target_vector])[0][0]
     return similarity
 
-
 # Create graph data structures using NetworkX
 G = nx.Graph()
 
@@ -66,7 +57,6 @@ for _, row in df.iterrows():
     experience = row['yearly_contributions']  # Use yearly contributions as a proxy for experience
     G.add_node(username, bio=bio, company=row['Company'], location=row['Location'], experience=experience,
                yearly_contributions=row['yearly_contributions'])
-
 
 # Function to set edge weights based on scores
 def set_edge_weights(graph, target_languages, target_education):
@@ -94,7 +84,6 @@ def set_edge_weights(graph, target_languages, target_education):
 
             graph.add_edge(follower_name, username, relation='collaborator', weight=weight)
 
-
 # Function to generate a custom graph based on input criteria
 def generate_custom_graph(target_languages, target_education):
     # Create a new graph
@@ -116,7 +105,6 @@ def generate_custom_graph(target_languages, target_education):
     set_edge_weights(custom_graph, target_languages, target_education)
 
     return custom_graph
-
 
 # Example usage
 target_languages = ['Java']
@@ -140,82 +128,3 @@ with open('top_50_criteria_graph.txt', 'w') as f:
     f.write("Top 50 nodes in main graph:\n")
     for node, score in top_50_main:
         f.write(f"{node}: {score}\n")
-
-# Community detection using Louvain method
-communities = list(greedy_modularity_communities(custom_graph, weight='weight'))
-
-
-# Print detected communities
-print("\nDetected Communities:")
-for i, community in enumerate(communities):
-    print(f"Community {i + 1}: {community}")
-
-
-# Detect communities using the Louvain method
-partition = community_louvain.best_partition(custom_graph, weight='weight')
-
-# Calculate the modularity score
-modularity_score = community_louvain.modularity(partition, custom_graph, weight='weight')
-
-# Organize nodes by community
-communities = {}
-for node, community in partition.items():
-    if community not in communities:
-        communities[community] = []
-    communities[community].append(node)
-
-# Print the results
-print(f"Modularity Score: {modularity_score:.4f}\n")
-for community, members in communities.items():
-    print(f"Community {community}: Size {len(members)}")
-    print("Members:", ", ".join(members))
-    print()
-
-# Write community details to a file
-with open('communities_details.txt', 'w') as f:
-    f.write(f"Modularity Score: {modularity_score:.4f}\n\n")
-    for community, members in communities.items():
-        if len(members) > 1:
-            f.write(f"Community {community}: Size {len(members)}\n")
-            f.write("Members: " + ", ".join(members) + "\n\n")
-
-# Print a message indicating the file has been saved
-print("Community details saved to 'communities_details.txt'")
-
-# Link prediction using various methods
-predicted_links = list(resource_allocation_index(custom_graph)) + \
-                  list(jaccard_coefficient(custom_graph)) + \
-                  list(adamic_adar_index(custom_graph))
-
-# Sort the predicted links by score in descending order
-predicted_links.sort(key=lambda x: x[2], reverse=True)
-
-# Print top 10 predicted links
-print("\nTop 10 Predicted Links:")
-for u, v, p in predicted_links[:10]:
-    print(f"({u}, {v}) -> {p}")
-
-
-# Function to form the optimal team based on criteria
-def form_optimal_team(target_languages, target_education, min_experience, team_size):
-    # Filter top developers based on target criteria
-    filtered_devs = []
-    for node, data in custom_graph.nodes(data=True):
-        if data['experience'] >= min_experience:
-            score = calculate_score(data['bio'], target_languages, target_education, data['experience'],
-                                    data['yearly_contributions'])
-            filtered_devs.append((node, score))
-    # Sort developers by score
-    filtered_devs.sort(key=lambda x: x[1], reverse=True)
-    # Select top developers for the team
-    team = [dev[0] for dev in filtered_devs[:team_size]]
-    return team
-
-
-# Form an optimal team
-team = form_optimal_team(target_languages, target_education, min_experience=5, team_size=5)
-
-# Print the optimal team
-print("\nOptimal Team:")
-for member in team:
-    print(member)
