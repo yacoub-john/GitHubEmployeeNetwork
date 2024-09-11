@@ -1,4 +1,3 @@
-https://www.overleaf.com/read/kvyvdxpkkwtf#3b442f 
 # Abstract
 
 Traditional hiring methods in the tech industry often struggle with
